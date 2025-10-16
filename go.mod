@@ -1,4 +1,4 @@
-module github.com/zaydaanjahangir/mini-ledger
+module mini-ledger
 
 go 1.24.3
 
