@@ -1,0 +1,15 @@
+# Binaries
+*.exe
+*.out
+*.test
+
+# SQLite data
+*.db
+data/
+
+# Go build cache
+bin/
+vendor/
+
+# OS / editor artifacts
+.DS_Store
