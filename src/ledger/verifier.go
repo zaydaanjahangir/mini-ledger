@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"encoding/hex"
-	// "log"
 	"crypto/sha256"
 	"mini-ledger/src/utils"
 	"fmt"
@@ -17,7 +16,7 @@ func HashTransaction(transaction models.Transaction) string{
 	return hex.EncodeToString(h[:])
 }
 
-func maybeProduceDigest(db *sql.DB, batchSize int) {
+func MaybeProduceDigest(db *sql.DB, batchSize int) {
 	rows, _ := db.Query("SELECT hash FROM transaction_hashes ORDER BY id DESC LIMIT ?", batchSize)
     defer rows.Close()
 
@@ -43,4 +42,25 @@ func maybeProduceDigest(db *sql.DB, batchSize int) {
         fmt.Println("Error inserting digest:", err)
     }
 }
+
+func VerifyDigests(db *sql.DB) bool {
+    rows, _ := db.Query("SELECT hash FROM transaction_hashes ORDER BY id ASC")
+    defer rows.Close()
+
+    var hashes []string
+    for rows.Next() {
+        var h string
+        rows.Scan(&h)
+        hashes = append(hashes, h)
+    }
+
+    tree := utils.NewMerkleTree(hashes)
+    computedRoot := tree.GetRootHash()
+
+    var storedRoot string
+    db.QueryRow("SELECT root_hash FROM digests ORDER BY id DESC LIMIT 1").Scan(&storedRoot)
+
+    return computedRoot == storedRoot
+}
+
 

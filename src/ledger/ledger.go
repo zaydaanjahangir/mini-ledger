@@ -77,5 +77,6 @@ func PostTransaction(db *sql.DB, transaction models.Transaction) error {
 			return err
 		}
 
+		MaybeProduceDigest(db, 10)
 		return nil
 }
