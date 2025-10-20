@@ -3,9 +3,12 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"encoding/hex"
 	"net/http"
 	// "log"
 	"fmt"
+	"crypto/sha256"
+    "time"
 )
 
 type Account struct {
@@ -25,6 +28,12 @@ type Transaction struct {
 type Response struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
+}
+
+func hashTransaction(transaction Transaction) string{
+	data, _ := json.Marshal(transaction)
+	h := sha256.Sum256(data)
+	return hex.EncodeToString(h[:])
 }
 
 func StartServer(db *sql.DB) {
@@ -148,11 +157,21 @@ func transactionHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// Log transactions for verifiability
+		txHash := hashTransaction(transaction)
+		_, err = db.Exec("INSERT INTO transaction_hashes(hash, created_at) VALUES (?, ?)", txHash, time.Now())
+		if err != nil {
+			http.Error(w, "Error storing tx hash:", http.StatusInternalServerError)
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(map[string]string{
 			"status":  "success",
 			"message": "Transaction validated successfully",
 		})
+
 	}
 }
+
+

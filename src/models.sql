@@ -24,3 +24,20 @@ CREATE TABLE IF NOT EXISTS entries (
     FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
 
+-- Stores Merkle root after every digest interval
+CREATE TABLE digests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    root_hash TEXT NOT NULL,
+    prev_root TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Log of hashes after transactions
+CREATE TABLE transaction_hashes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hash TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
