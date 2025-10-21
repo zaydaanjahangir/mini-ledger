@@ -44,7 +44,11 @@ func MaybeProduceDigest(db *sql.DB, batchSize int) {
 }
 
 func VerifyDigests(db *sql.DB) bool {
-    rows, _ := db.Query("SELECT hash FROM transaction_hashes ORDER BY id ASC")
+    rows, err := db.Query("SELECT hash FROM transaction_hashes ORDER BY id ASC")
+	if err != nil {
+    	fmt.Println("Error reading hashes:", err)
+    return false
+	}
     defer rows.Close()
 
     var hashes []string

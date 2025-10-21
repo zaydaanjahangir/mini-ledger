@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS entries (
 );
 
 -- Stores Merkle root after every digest interval
-CREATE TABLE digests (
+CREATE TABLE IF NOT EXISTS digests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     root_hash TEXT NOT NULL,
     prev_root TEXT,
@@ -33,7 +33,7 @@ CREATE TABLE digests (
 );
 
 -- Log of hashes after transactions
-CREATE TABLE transaction_hashes (
+CREATE TABLE IF NOT EXISTS transaction_hashes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     hash TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
