@@ -40,7 +40,7 @@ func MaybeProduceDigest(db *sql.DB) {
 	var prev string
     db.QueryRow("SELECT root_hash FROM digests ORDER BY id DESC LIMIT 1").Scan(&prev)
 
-	_, err := db.Exec("INSERT INTO digests(root_hash, prev_root) VALUES(?, ?)", root, prev)
+	_, err = db.Exec("INSERT INTO digests(root_hash, prev_root) VALUES(?, ?)", root, prev)
     if err != nil {
         fmt.Println("Error inserting digest:", err)
     }
