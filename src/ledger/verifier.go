@@ -16,19 +16,22 @@ func HashTransaction(transaction models.Transaction) string{
 	return hex.EncodeToString(h[:])
 }
 
-func MaybeProduceDigest(db *sql.DB, batchSize int) {
-	rows, _ := db.Query("SELECT hash FROM transaction_hashes ORDER BY id DESC LIMIT ?", batchSize)
-    defer rows.Close()
+func MaybeProduceDigest(db *sql.DB) {
+	rows, err := db.Query("SELECT hash FROM transaction_hashes ORDER BY id DESC")
+	if err != nil {
+		fmt.Println("Error getting hashes:", err)
+		return
+	}
+	if rows == nil {
+		return 
+	}
+  defer rows.Close()
 
 	var hashes []string
 	for rows.Next() {
 		var h string
 		rows.Scan(&h)
 		hashes = append(hashes, h)
-	}
-
-	if len(hashes) < batchSize {
-		return
 	}
 
 	tree := utils.NewMerkleTree(hashes)
@@ -44,7 +47,7 @@ func MaybeProduceDigest(db *sql.DB, batchSize int) {
 }
 
 func VerifyDigests(db *sql.DB) bool {
-    rows, err := db.Query("SELECT hash FROM transaction_hashes ORDER BY id ASC")
+    rows, err := db.Query("SELECT hash FROM transaction_hashes ORDER BY id DESC")
 	if err != nil {
     	fmt.Println("Error reading hashes:", err)
     return false

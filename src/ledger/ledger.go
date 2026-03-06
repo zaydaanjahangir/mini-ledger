@@ -3,6 +3,7 @@ package ledger
 import (
 	"database/sql"
 	"mini-ledger/src/models"
+	"errors"
 	"time"
 )
 
@@ -29,15 +30,17 @@ func PostTransaction(db *sql.DB, transaction models.Transaction) error {
 			if err != nil {
 				return err
 			}
+			//TODO return a more specific error, this returns nil which can be percevied as a success 
 			if !exists {
-				return err
+				return errors.New("Account does not exist")
 			}
 
 			total += entry.Amount
 		}
 
+		//TODO Same thing here, should we address this and write a more specific error
 		if total != 0 {
-			return err
+			return errors.New("Total is not equal to 0")
 		}
 
 		res, err := tx.Exec("INSERT INTO transactions(description) VALUES(?)", transaction.Description)
@@ -77,6 +80,6 @@ func PostTransaction(db *sql.DB, transaction models.Transaction) error {
 			return err
 		}
 
-		MaybeProduceDigest(db, 10)
+		MaybeProduceDigest(db)
 		return nil
 }
