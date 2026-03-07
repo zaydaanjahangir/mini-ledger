@@ -52,6 +52,43 @@ func InitDB() *sql.DB {
 		log.Fatalf("failed to execute schema file: %v", err)
 		os.Exit(1)
 	}
+	ensureDigestColumns(db)
 	fmt.Println("executed schema file")
 	return db
+}
+
+func ensureDigestColumns(db *sql.DB) {
+	rows, err := db.Query("PRAGMA table_info(digests)")
+	if err != nil {
+		log.Fatalf("failed to inspect digests table: %v", err)
+	}
+	defer rows.Close()
+
+	cols := make(map[string]bool)
+	for rows.Next() {
+		var cid int
+		var name string
+		var ctype string
+		var notnull int
+		var dflt sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			log.Fatalf("failed scanning digests table info: %v", err)
+		}
+		cols[name] = true
+	}
+	if err := rows.Err(); err != nil {
+		log.Fatalf("failed reading digests table info: %v", err)
+	}
+
+	if !cols["start_id"] {
+		if _, err := db.Exec("ALTER TABLE digests ADD COLUMN start_id INTEGER"); err != nil {
+			log.Fatalf("failed adding digests.start_id: %v", err)
+		}
+	}
+	if !cols["end_id"] {
+		if _, err := db.Exec("ALTER TABLE digests ADD COLUMN end_id INTEGER"); err != nil {
+			log.Fatalf("failed adding digests.end_id: %v", err)
+		}
+	}
 }

@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS digests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     root_hash TEXT NOT NULL,
     prev_root TEXT,
+    start_id INTEGER,
+    end_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

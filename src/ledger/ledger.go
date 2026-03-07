@@ -2,84 +2,82 @@ package ledger
 
 import (
 	"database/sql"
-	"mini-ledger/src/models"
 	"errors"
+	"mini-ledger/src/models"
 	"time"
 )
 
 func PostAccount(db *sql.DB, account models.Account) error {
 	_, err := db.Exec("INSERT INTO accounts (name) VALUES (?)", account.Name)
-		if err != nil{
-			return err
-		}
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func PostTransaction(db *sql.DB, transaction models.Transaction) error {
-		tx, err := db.Begin()
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// TODO: Store each account’s ID in a map so you don’t query twice
+	var total int64
+	for _, entry := range transaction.Entries {
+		var exists bool
+		err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM accounts WHERE name = ?)", entry.Account).Scan(&exists)
 		if err != nil {
 			return err
 		}
-		defer tx.Rollback()
-
-		// TODO: Store each account’s ID in a map so you don’t query twice
-		var total int64
-		for _, entry := range transaction.Entries {
-			var exists bool
-			err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM accounts WHERE name = ?)", entry.Account).Scan(&exists)
-			if err != nil {
-				return err
-			}
-			//TODO return a more specific error, this returns nil which can be percevied as a success 
-			if !exists {
-				return errors.New("Account does not exist")
-			}
-
-			total += entry.Amount
+		//TODO return a more specific error, this returns nil which can be percevied as a success
+		if !exists {
+			return errors.New("Account does not exist")
 		}
 
-		//TODO Same thing here, should we address this and write a more specific error
-		if total != 0 {
-			return errors.New("Total is not equal to 0")
-		}
+		total += entry.Amount
+	}
 
-		res, err := tx.Exec("INSERT INTO transactions(description) VALUES(?)", transaction.Description)
-		if err != nil{
-			return err
-		}
-		transactionID, _ := res.LastInsertId()
-		
+	//TODO Same thing here, should we address this and write a more specific error
+	if total != 0 {
+		return errors.New("Total is not equal to 0")
+	}
 
-		
-		stmt, err := tx.Prepare("INSERT INTO entries(transaction_id, account_id, amount) VALUES(?, ? ,?)")
+	res, err := tx.Exec("INSERT INTO transactions(description) VALUES(?)", transaction.Description)
+	if err != nil {
+		return err
+	}
+	transactionID, _ := res.LastInsertId()
+
+	stmt, err := tx.Prepare("INSERT INTO entries(transaction_id, account_id, amount) VALUES(?, ? ,?)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for _, entry := range transaction.Entries {
+		var accountID int
+		err = tx.QueryRow("SELECT id FROM accounts WHERE name = ?", entry.Account).Scan(&accountID)
 		if err != nil {
 			return err
 		}
-		defer stmt.Close()
-		for _, entry := range transaction.Entries {
-			var accountID int
-			err = tx.QueryRow("SELECT id FROM accounts WHERE name = ?", entry.Account).Scan(&accountID)
-			if err != nil {
-				return err
-			}
-			_, err = stmt.Exec(transactionID, accountID, entry.Amount)
-			if err != nil {
-				return err
-			}
-		}
-
-		err = tx.Commit()
+		_, err = stmt.Exec(transactionID, accountID, entry.Amount)
 		if err != nil {
 			return err
 		}
+	}
 
-		// Log transactions for verifiability
-		txHash := HashTransaction(transaction)
-		_, err = db.Exec("INSERT INTO transaction_hashes(hash, created_at) VALUES (?, ?)", txHash, time.Now())
-		if err != nil {
-			return err
-		}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
-		MaybeProduceDigest(db)
-		return nil
+	// Log transactions for verifiability
+	txHash := HashTransaction(transaction)
+	_, err = db.Exec("INSERT INTO transaction_hashes(hash, created_at) VALUES (?, ?)", txHash, time.Now())
+	if err != nil {
+		return err
+	}
+
+	// MaybeProduceDigest(db)
+	return nil
 }
